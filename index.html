@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+<meta charset="UTF-8">
+<title>Meta Play 1 — Instagram style</title>
+<meta name="author" content="Siobhan O'Flynn">
+<meta name="description" content="An interactive text styled as an Instagram post, where the hover effect reveals lines from Arturo Béjar's 2023 testimony below lines from a Mark Zuckerberg 2018 statement.">
+<style>
+  :root {
+    --ink: #262626;
+    --faint: #8e8e8e;
+    --border: #dbdbdb;
+    --bg: #fafafa;
+    --accent: #0082ff; /* close to Instagram's own link blue */
+    --heart: #ed4956;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    min-height: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .viewport {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+  }
+
+  /* The post card itself */
+  #post {
+    width: 100%;
+    max-width: 470px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+  }
+
+  /* ---- Header: avatar, username, timestamp, more-options ---- */
+  .post-header {
+    display: flex;
+    align-items: center;
+    padding: 0.7rem 0.9rem;
+  }
+  .avatar-ring {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    padding: 2px;
+    background: conic-gradient(from 45deg, #feda75, #fa7e1e, #d62976, #962fbf, #4f5bd5, #feda75);
+    flex-shrink: 0;
+  }
+  .avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #262626;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 2px solid #fff;
+  }
+  .header-text {
+    margin-left: 0.6rem;
+    line-height: 1.25;
+  }
+  .username {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+  .location {
+    font-size: 0.75rem;
+    color: var(--faint);
+  }
+  .more-btn {
+    margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink);
+    padding: 0.3rem;
+  }
+
+  /* ---- Media area: this is where the poem lives ---- */
+  .media {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(155deg, #1c1c22, #2b2a33 60%, #1c1c22);
+    overflow: hidden;
+  }
+  .slides {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    width: 200%; /* two slides side by side */
+    transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .slides.on-slide-2 { transform: translateX(-50%); }
+  .slide {
+    width: 50%; /* each slide is one "page" of the 200% track */
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.6rem;
+    overflow-y: auto;
+  }
+  .poem-block {
+    color: #f2ede4;
+    text-align: center;
+  }
+  .row {
+    margin: 0.55rem 0;
+  }
+  .line1 {
+    display: block;
+    font-size: clamp(0.85rem, 2.6vw, 1.05rem);
+    line-height: 1.5;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .row:hover .line1,
+  .line1.active {
+    color: #6db8ff;
+  }
+  .line2 {
+    display: block;
+    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
+    line-height: 1.5;
+    color: #b9c4d4;
+    font-style: italic;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, opacity 0.5s ease, margin-top 0.5s ease;
+    margin-top: 0;
+  }
+  .line2.visible {
+    max-height: 150px;
+    opacity: 1;
+    margin-top: 0.25rem;
+  }
+  .line1.attribution {
+    font-size: clamp(0.75rem, 2.2vw, 0.9rem);
+    letter-spacing: 0.04em;
+    opacity: 0.8;
+    margin-top: 1rem;
+  }
+  .line2.attribution.secondary {
+    color: #9aa5b3;
+    font-style: italic;
+  }
+
+  /* Carousel dot indicator, like a real multi-image IG post */
+  .dots {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 3;
+  }
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.4);
+    transition: background 0.25s ease;
+  }
+  .dot.active { background: #fff; }
+
+  /* Carousel arrows, shown on hover like the desktop IG UI */
+  .arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.9);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    z-index: 3;
+  }
+  .media:hover .arrow { opacity: 1; }
+  .arrow.prev { left: 10px; }
+  .arrow.next { right: 10px; }
+  .arrow svg { width: 16px; height: 16px; }
+
+  /* ---- Action icon row ---- */
+  .actions {
+    display: flex;
+    align-items: center;
+    padding: 0.55rem 0.75rem 0.1rem;
+  }
+  .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.4rem;
+    color: var(--ink);
+    display: flex;
+  }
+  .icon-btn svg {
+    width: 24px;
+    height: 24px;
+  }
+  .icon-btn.liked svg {
+    fill: var(--heart);
+    stroke: var(--heart);
+  }
+  .actions .bookmark { margin-left: auto; }
+
+  /* ---- Likes / caption / timestamp ---- */
+  .likes {
+    padding: 0 0.9rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .caption {
+    padding: 0.3rem 0.9rem 0;
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+  .caption .username { font-weight: 600; margin-right: 0.35em; }
+  .view-comments {
+    padding: 0.3rem 0.9rem 0;
+    font-size: 0.8rem;
+    color: var(--faint);
+  }
+  .timestamp {
+    padding: 0.3rem 0.9rem 0.9rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.03em;
+    color: var(--faint);
+    text-transform: uppercase;
+  }
+  .coming-soon {
+    color: #f2ede4;
+    font-size: clamp(0.95rem, 3vw, 1.2rem);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.75;
+  }
+</style>
+</head>
+<body>
+  <div class="viewport">
+    <div id="post">
+
+      <div class="post-header">
+        <div class="avatar-ring"><div class="avatar">MP</div></div>
+        <div class="header-text">
+          <div class="username">meta.play.1</div>
+          <div class="location">Making &amp; Breaking Since 2004</div>
+        </div>
+        <button class="more-btn" aria-label="More options">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+        </button>
+      </div>
+
+      <div class="media" id="media">
+        <div class="slides" id="slides">
+          <div class="slide"><div class="poem-block" id="stage1"></div></div>
+          <div class="slide"><div class="poem-block"><div class="coming-soon">Launching soon</div><div id="stage2"></div></div></div>
+        </div>
+
+        <button class="arrow prev" id="prevBtn" aria-label="Previous slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="arrow next" id="nextBtn" aria-label="Next slide">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#262626" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+
+        <div class="dots">
+          <div class="dot active" data-slide="0"></div>
+          <div class="dot" data-slide="1"></div>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="icon-btn" id="likeBtn" aria-label="Like">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="Comment">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.4 8.4 0 0 1-8.9 8.4 9 9 0 0 1-3.1-.6L3 21l1.7-5A8.4 8.4 0 0 1 21 11.5z"/>
+          </svg>
+        </button>
+        <button class="icon-btn" aria-label="Share">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+        <button class="icon-btn bookmark" aria-label="Save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round">
+            <path d="M6 3h12v18l-6-4.5L6 21z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="likes" id="likesCount">1,248 likes</div>
+
+      <div class="caption">
+        <span class="username">meta.play.1</span><span>hover the lines to reveal what's underneath →</span>
+      </div>
+      <div class="view-comments">View all 42 comments</div>
+      <div class="timestamp">2 hours ago</div>
+
+    </div>
+  </div>
+
+<script>
+  // ---- SLIDE 1 CONTENT ----
+  const pairs1 = [
+    { text1: "It's not that every single thing that happens", text2: "I appear before you today as a dad with firsthand experience" },
+    { text1: "on Facebook is gonna be good.", text2: "of a child who received unwanted sexual advances on Instagram." },
+    { text1: "This is humanity.", text2: "As an expert with over 20 years of experience," },
+    { text1: "People use tools for good and bad,", text2: "a senior leader for safety & protection at Facebook," },
+    { text1: "but I think that we have a clear responsibility", text2: "it is unacceptable that a 13-year-old girl" },
+    { text1: "to make sure that the good is amplified", text2: "gets propositioned on social media." },
+    { text1: "and to do everything we can to mitigate the bad.", text2: "Unfortunately, it happens all too frequently today." },
+    { text1: "— Mark Zuckerberg (2018)", text2: "— Arturo Béjar (2023)", attribution: true },
+    { text1: "Zuckerberg--The Recode interview. By Kara Swisher.", text2: "Testimony before the Subcommittee on Privacy, Technology, and the Law", attribution: true }
+  ];
+
+  // ---- SLIDE 2 CONTENT (empty template — add your text here, same shape as pairs1) ----
+  const pairs2 = [
+    // { text1: "Slide-2 paragraph-1 line", text2: "Slide-2 paragraph-2 line" },
+  ];
+
+  // Same reusable render function as before — anything added to pairs2
+  // automatically gets the identical hover behavior and styling.
+  function renderPairs(pairsArray, containerEl) {
+    pairsArray.forEach(pair => {
+      const row = document.createElement('div');
+      row.className = 'row';
+
+      const line1El = document.createElement('span');
+      line1El.className = pair.attribution ? 'line1 attribution' : 'line1';
+      line1El.textContent = pair.text1;
+
+      const line2El = document.createElement('span');
+      line2El.className = pair.attribution ? 'line2 attribution secondary' : 'line2';
+      line2El.textContent = pair.text2;
+
+      row.addEventListener('mouseenter', () => {
+        line1El.classList.add('active');
+        line2El.classList.add('visible');
+      });
+      row.addEventListener('mouseleave', () => {
+        line1El.classList.remove('active');
+        line2El.classList.remove('visible');
+      });
+
+      row.appendChild(line1El);
+      row.appendChild(line2El);
+      containerEl.appendChild(row);
+    });
+  }
+
+  renderPairs(pairs1, document.getElementById('stage1'));
+  renderPairs(pairs2, document.getElementById('stage2'));
+
+  // ---- CAROUSEL: replaces the page-flip with an Instagram-style
+  // multi-image swipe, using the arrows or the dot indicators. ----
+  const slidesEl = document.getElementById('slides');
+  const dots = document.querySelectorAll('.dot');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  let current = 0;
+
+  function goToSlide(index) {
+    current = Math.max(0, Math.min(1, index));
+    slidesEl.classList.toggle('on-slide-2', current === 1);
+    dots.forEach((d, i) => d.classList.toggle('active', i === current));
+  }
+
+  prevBtn.addEventListener('click', () => goToSlide(current - 1));
+  nextBtn.addEventListener('click', () => goToSlide(current + 1));
+  dots.forEach(dot => {
+    dot.addEventListener('click', () => goToSlide(Number(dot.dataset.slide)));
+  });
+
+  // ---- LIKE BUTTON: toggles filled/red heart, like a real double-tap ----
+  const likeBtn = document.getElementById('likeBtn');
+  const likesCount = document.getElementById('likesCount');
+  let liked = false;
+
+  likeBtn.addEventListener('click', () => {
+    liked = !liked;
+    likeBtn.classList.toggle('liked', liked);
+    likesCount.textContent = liked ? '1,249 likes' : '1,248 likes';
+  });
+</script>
+</body>
+</html>
